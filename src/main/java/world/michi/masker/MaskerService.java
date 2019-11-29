@@ -26,8 +26,8 @@ public class MaskerService {
     @Resource
     StringRedisTemplate stringRedisTemplate;
 
-    @Resource
-    MaskerQueue maskerQueue;
+//    @Resource
+//    MaskerQueue maskerQueue;
 
 
 //    @Async("asyncServiceExecutor")

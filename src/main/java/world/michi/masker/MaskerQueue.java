@@ -82,87 +82,87 @@ public class MaskerQueue {
 //    }
 
 
-    private final Lock lock = new ReentrantLock();
-
-    private Condition notNow = lock.newCondition();
-
-    private Condition notEnough = lock.newCondition();
-
-    PriorityQueue<Long> queue = new PriorityQueue<>();
-
-
-    @FunctionalInterface
-    interface MaskerExecutor{
-        void execute(long id);
-    }
+//    private final Lock lock = new ReentrantLock();
+//
+//    private Condition notNow = lock.newCondition();
+//
+//    private Condition notEnough = lock.newCondition();
+//
+//    PriorityQueue<Long> queue = new PriorityQueue<>();
 
 
-
-
-    public int size(){
-        lock.lock();
-
-        try {
-            return this.queue.size();
-
-        }finally {
-            lock.unlock();
-        }
-    }
-
-
-    public void take(MaskerExecutor maskerExecutor){
-
-            lock.lock();
-            try {
-
-                if(queue.size() != 0){
-
-                    long then = queue.peek() - System.currentTimeMillis();
-
-                    if(then >= 0){
-
-                        notNow.await(then, TimeUnit.MILLISECONDS);
-
-                    }else {
-
-                        notEnough.signalAll();
-
-                        maskerExecutor.execute(queue.poll());
-                    }
-
-                }else {
-                    notNow.await();
-                }
-
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }finally {
-                lock.unlock();
-            }
-
-    }
-
-
-    public void add(long id){
-
-        lock.lock();
-        try {
-
-            if(size() == 100){
-
-                notEnough.await();
-            }
-            this.queue.add(id);
-
-            notNow.signalAll();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
-        }
-
-    }
+//    @FunctionalInterface
+//    interface MaskerExecutor{
+//        void execute(long id);
+//    }
+//
+//
+//
+//
+//    public int size(){
+//        lock.lock();
+//
+//        try {
+//            return this.queue.size();
+//
+//        }finally {
+//            lock.unlock();
+//        }
+//    }
+//
+//
+//    public void take(MaskerExecutor maskerExecutor){
+//
+//            lock.lock();
+//            try {
+//
+//                if(queue.size() != 0){
+//
+//                    long then = queue.peek() - System.currentTimeMillis();
+//
+//                    if(then >= 0){
+//
+//                        notNow.await(then, TimeUnit.MILLISECONDS);
+//
+//                    }else {
+//
+//                        notEnough.signalAll();
+//
+//                        maskerExecutor.execute(queue.poll());
+//                    }
+//
+//                }else {
+//                    notNow.await();
+//                }
+//
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }finally {
+//                lock.unlock();
+//            }
+//
+//    }
+//
+//
+//    public void add(long id){
+//
+//        lock.lock();
+//        try {
+//
+//            if(size() == 100){
+//
+//                notEnough.await();
+//            }
+//            this.queue.add(id);
+//
+//            notNow.signalAll();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        } finally {
+//            lock.unlock();
+//        }
+//
+//    }
 
 
 
