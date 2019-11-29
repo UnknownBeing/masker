@@ -25,17 +25,24 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MaskerService {
 
     private final Lock lock = new ReentrantLock();
+
     @Resource
     StringRedisTemplate stringRedisTemplate;
+
     @Value("${masker.prefix:masker}")
     String prefix;
+
     @Value("${masker.timeout:10}")
     int timeout;
+
     @Value("${masker.expired:10}")
     int expired;
+
     @Value("${masker.current}")
     int current;
+
     private Condition notNow = lock.newCondition();
+
     private Condition notEnough = lock.newCondition();
 
     String maskSet() {
@@ -61,7 +68,6 @@ public class MaskerService {
     }
 
 
-//    @Async("asyncServiceExecutor")
     public void out() {
 
         lock.lock();
@@ -84,10 +90,15 @@ public class MaskerService {
 
                             if (System.currentTimeMillis() - stringTypedTuple.getScore() <= expired) {
 
-                                success(stringTypedTuple.getValue(), (long) ((double) stringTypedTuple.getScore()));
+                                log.info("~" + (System.currentTimeMillis() - stringTypedTuple.getScore()));
+
+                                success(stringTypedTuple.getValue());
+
                             } else {
 
-                                fail(stringTypedTuple.getValue(), (long) ((double) stringTypedTuple.getScore()));
+                                log.info("!" + (System.currentTimeMillis() - stringTypedTuple.getScore()));
+
+                                fail(stringTypedTuple.getValue());
                             }
                             stringRedisTemplate.opsForZSet().remove(maskSet(), stringTypedTuple.getValue());
                         }
@@ -130,7 +141,7 @@ public class MaskerService {
 
 
     @Async("asyncServiceExecutor")
-    void success(String str, long time) {
+    void success(String str) {
 
         String[] strings = str.split(":");
 
@@ -140,7 +151,7 @@ public class MaskerService {
 
 
     @Async("asyncServiceExecutor")
-    void fail(String str, long time) {
+    void fail(String str) {
 
         String[] strings = str.split(":");
 
