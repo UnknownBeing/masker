@@ -22,7 +22,6 @@ public class MaskerInputRunner implements ApplicationRunner {
     @Resource
     MaskerService maskerService;
 
-
     @Override
     @Async("asyncServiceExecutor")
     public void run(ApplicationArguments args) {
