@@ -48,8 +48,12 @@ public class MaskerService {
         return prefix + ":main";
     }
 
+    String maskQueue() {
 
+        return prefix + ":queue:";
+    }
 
+    @Async("asyncServiceExecutor")
     public void in() {
 
         Optional.ofNullable(stringRedisTemplate.opsForList().rightPop(maskMainQueue(), timeout, TimeUnit.SECONDS)).ifPresent(str -> distribute(str));
@@ -57,6 +61,7 @@ public class MaskerService {
     }
 
 
+//    @Async("asyncServiceExecutor")
     public void out() {
 
         lock.lock();
@@ -102,12 +107,12 @@ public class MaskerService {
     }
 
 
-    @Async("asyncServiceExecutor")
+
     void distribute(String str) {
 
-        String[] strings = str.split(":");
+        String[] strings = str.split(",");
 
-        stringRedisTemplate.opsForZSet().add(maskSet(), strings[0], Long.valueOf(strings[1]));
+        stringRedisTemplate.opsForZSet().add(maskSet(), strings[1], System.currentTimeMillis() + Long.valueOf(strings[0]));
 
         lock.lock();
 
@@ -125,17 +130,21 @@ public class MaskerService {
 
 
     @Async("asyncServiceExecutor")
-    void success(String id, long time) {
+    void success(String str, long time) {
 
-        log.info("成功~" + id + "~" + (System.currentTimeMillis() - time));
+        String[] strings = str.split(":");
+
+        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[1], str);
 
     }
 
 
     @Async("asyncServiceExecutor")
-    void fail(String id, long time) {
+    void fail(String str, long time) {
 
-        log.info("失败~" + id + "~" + (System.currentTimeMillis() - time));
+        String[] strings = str.split(":");
+
+        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[0], str);
 
     }
 

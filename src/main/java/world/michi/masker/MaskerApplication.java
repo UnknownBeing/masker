@@ -30,9 +30,9 @@ public class MaskerApplication {
     public Executor asyncServiceExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
 
-        executor.setCorePoolSize(5);
+        executor.setCorePoolSize(8);
 
-        executor.setMaxPoolSize(10);
+        executor.setMaxPoolSize(32);
 
         executor.setQueueCapacity(10000);
 
