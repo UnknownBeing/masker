@@ -1,6 +1,7 @@
 package world.michi.masker;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -23,111 +24,52 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class MaskerService {
 
+    private final Lock lock = new ReentrantLock();
     @Resource
     StringRedisTemplate stringRedisTemplate;
-
-//    @Resource
-//    MaskerQueue maskerQueue;
-
-
-//    @Async("asyncServiceExecutor")
-//    public void in(){
-//
-//        if(maskerQueue.size() == 10000){
-//
-//            return;
-//        }
-//
-//         Optional.ofNullable(stringRedisTemplate.opsForList().rightPop("MASKER", 10, TimeUnit.SECONDS)).ifPresent(str -> {
-//
-//             maskerQueue.add(MaskerQueue.MaskerMessageEntity.builder().time(Long.valueOf(str)).build());
-//         });
-//    }
-//
-//    @Async("asyncServiceExecutor")
-//    public void out(){
-//
-//        maskerQueue.take((str) -> log.info("~" + str + "~" + (str.getTime() - System.currentTimeMillis())));
-//
-//    }
-
-
-//    @Async("asyncServiceExecutor")
-//    public void in(){
-//
-//        Optional.ofNullable(stringRedisTemplate.opsForList().rightPop("MASKER", 10, TimeUnit.SECONDS)).ifPresent(str -> {
-//
-//             maskerQueue.add(Long.valueOf(str));
-//         });
-//    }
-//
-//
-//    @Async("asyncServiceExecutor")
-//    public void out(){
-//
-//        maskerQueue.take(id -> {
-//
-//            long delay = id - System.currentTimeMillis();
-//
-//            if(delay < -10){
-//
-//                log.info("死信~" + id + "~" + delay);
-//            }else{
-//
-//                log.info("~" + id + "~" + delay);
-//            }
-//
-//        });
-//
-//    }
-
-
-    private final Lock lock = new ReentrantLock();
-
+    @Value("${masker.prefix:masker}")
+    String prefix;
+    @Value("${masker.timeout:10}")
+    int timeout;
+    @Value("${masker.expired:10}")
+    int expired;
+    @Value("${masker.current}")
+    int current;
     private Condition notNow = lock.newCondition();
-
     private Condition notEnough = lock.newCondition();
 
-    @Async("asyncServiceExecutor")
-    public void in(){
+    String maskSet() {
 
-        Optional.ofNullable(stringRedisTemplate.opsForList().rightPop("M", 10, TimeUnit.SECONDS)).ifPresent(str -> {
+        return prefix + ":set:" + current;
+    }
 
-            String[] strings = str.split(":");
+    String maskMainQueue() {
 
-            stringRedisTemplate.opsForZSet().add("T", strings[0], Long.valueOf(strings[1]));
+        return prefix + ":main";
+    }
 
-            lock.lock();
 
-            try {
 
-                notNow.signalAll();
+    public void in() {
 
-                notEnough.signalAll();
-
-            } finally {
-
-                lock.unlock();
-            }
-
-        });
+        Optional.ofNullable(stringRedisTemplate.opsForList().rightPop(maskMainQueue(), timeout, TimeUnit.SECONDS)).ifPresent(str -> distribute(str));
 
     }
 
 
-    public void out(){
+    public void out() {
 
         lock.lock();
 
         try {
 
-            if (!stringRedisTemplate.hasKey("T")) {
+            if (!stringRedisTemplate.hasKey(maskSet())) {
 
                 notEnough.await();
 
             } else {
 
-                stringRedisTemplate.opsForZSet().rangeWithScores("T", 0, 1).forEach(stringTypedTuple -> {
+                stringRedisTemplate.opsForZSet().rangeWithScores(maskSet(), 0, 1).forEach(stringTypedTuple -> {
 
                     try {
 
@@ -135,14 +77,14 @@ public class MaskerService {
 
                         if (System.currentTimeMillis() - stringTypedTuple.getScore() >= 0) {
 
-                            if (System.currentTimeMillis() - stringTypedTuple.getScore() <= 10) {
+                            if (System.currentTimeMillis() - stringTypedTuple.getScore() <= expired) {
 
                                 success(stringTypedTuple.getValue(), (long) ((double) stringTypedTuple.getScore()));
                             } else {
 
                                 fail(stringTypedTuple.getValue(), (long) ((double) stringTypedTuple.getScore()));
                             }
-                            stringRedisTemplate.opsForZSet().remove("T", stringTypedTuple.getValue());
+                            stringRedisTemplate.opsForZSet().remove(maskSet(), stringTypedTuple.getValue());
                         }
 
                     } catch (InterruptedException e) {
@@ -157,8 +99,28 @@ public class MaskerService {
 
             lock.unlock();
         }
+    }
 
 
+    @Async("asyncServiceExecutor")
+    void distribute(String str) {
+
+        String[] strings = str.split(":");
+
+        stringRedisTemplate.opsForZSet().add(maskSet(), strings[0], Long.valueOf(strings[1]));
+
+        lock.lock();
+
+        try {
+
+            notNow.signalAll();
+
+            notEnough.signalAll();
+
+        } finally {
+
+            lock.unlock();
+        }
     }
 
 

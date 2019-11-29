@@ -26,7 +26,7 @@ public class MaskerInputRunner implements ApplicationRunner {
     @Async("asyncServiceExecutor")
     public void run(ApplicationArguments args) {
 
-        while(true){
+        while (true) {
 
             maskerService.in();
 

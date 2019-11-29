@@ -7,3 +7,9 @@ spring:
     host: localhost
     port: 6379
     password:
+
+masker:
+  #  prefix: test
+  #  expired: 10
+  current: 1
+#  timeout: 10
