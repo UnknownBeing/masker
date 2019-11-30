@@ -60,10 +60,13 @@ public class MaskerService {
         return prefix + ":queue:";
     }
 
+
+
     @Async("asyncServiceExecutor")
     public void in() {
 
         Optional.ofNullable(stringRedisTemplate.opsForList().rightPop(maskMainQueue(), timeout, TimeUnit.SECONDS)).ifPresent(str -> distribute(str));
+
 
     }
 
@@ -96,7 +99,7 @@ public class MaskerService {
 
                             } else {
 
-                                log.info("!" + (System.currentTimeMillis() - stringTypedTuple.getScore()));
+                                log.info("失败" + (System.currentTimeMillis() - stringTypedTuple.getScore()));
 
                                 fail(stringTypedTuple.getValue());
                             }
@@ -123,7 +126,7 @@ public class MaskerService {
 
         String[] strings = str.split(",");
 
-        stringRedisTemplate.opsForZSet().add(maskSet(), strings[1], System.currentTimeMillis() + Long.valueOf(strings[0]));
+        stringRedisTemplate.opsForZSet().add(maskSet(), strings[1], Long.valueOf(strings[0]));
 
         lock.lock();
 
@@ -145,7 +148,7 @@ public class MaskerService {
 
         String[] strings = str.split(":");
 
-        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[1], str);
+        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[2], str);
 
     }
 
@@ -155,7 +158,7 @@ public class MaskerService {
 
         String[] strings = str.split(":");
 
-        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[0], str);
+        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[1], str);
 
     }
 

@@ -10,6 +10,7 @@ spring:
 
 masker:
   #  prefix: test
-#  expired: 50
+#  expired: 10
   current: 1
 #  timeout: 10
+#  size: 100
