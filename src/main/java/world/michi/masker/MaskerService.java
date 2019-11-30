@@ -35,7 +35,7 @@ public class MaskerService {
     @Value("${masker.timeout:10}")
     int timeout;
 
-    @Value("${masker.expired:10}")
+    @Value("${masker.expired:100}")
     int expired;
 
     @Value("${masker.current}")
@@ -123,7 +123,7 @@ public class MaskerService {
 
         String[] strings = str.split(",");
 
-        stringRedisTemplate.opsForZSet().add(maskSet(), strings[1], System.currentTimeMillis() + Long.valueOf(strings[0]));
+        stringRedisTemplate.opsForZSet().add(maskSet(), strings[1], Long.valueOf(strings[0]));
 
         lock.lock();
 
@@ -145,7 +145,7 @@ public class MaskerService {
 
         String[] strings = str.split(":");
 
-        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[1], str);
+        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[2], str);
 
     }
 
@@ -155,7 +155,7 @@ public class MaskerService {
 
         String[] strings = str.split(":");
 
-        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[0], str);
+        stringRedisTemplate.opsForList().leftPush(maskQueue() + strings[1], str);
 
     }
 
